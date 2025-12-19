@@ -1,15 +1,16 @@
 from flask import Flask, render_template, request, session, redirect, url_for
 from google import genai
 from google.genai.errors import ClientError
-import time
 import os
+import time
+
 # ---------------- CONFIG ----------------
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-
 MODEL_NAME = "gemini-2.5-flash"
 
-MAX_MESSAGES = 6  # keep last 3 Q&A only
+MAX_MESSAGES = 6
+COOLDOWN_SECONDS = 30
 
 # ----------------------------------------
 
@@ -21,9 +22,7 @@ app.secret_key = "chat-secret-key"
 # ---------------- HELPERS ----------------
 
 def trim_chat(chat):
-    if len(chat) > MAX_MESSAGES:
-        return chat[-MAX_MESSAGES:]
-    return chat
+    return chat[-MAX_MESSAGES:]
 
 
 def ask_tutor(question):
@@ -37,23 +36,11 @@ Student question: {question}
 Tutor response:
 """
 
-    try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt
-        )
-        return response.text.strip()
-
-    except ClientError as e:
-        error_text = str(e)
-
-        if "RESOURCE_EXHAUSTED" in error_text or "429" in error_text:
-            return (
-                "I need a short break because many students are asking questions right now.\n\n"
-                "Please wait about 20 seconds and then ask again 😊"
-            )
-
-        return "Something went wrong. Please try again in a moment."
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=prompt
+    )
+    return response.text.strip()
 
 
 # ---------------- ROUTES ----------------
@@ -63,30 +50,46 @@ def home():
     if "chat" not in session:
         session["chat"] = []
 
-    # STEP 1: user submits question
     if request.method == "POST":
         session["pending_question"] = request.form["question"]
         session["thinking"] = True
         session.modified = True
         return redirect(url_for("home"))
 
-    # STEP 2: thinking → generate answer
     if session.get("thinking"):
-        question = session.pop("pending_question", None)
         session["thinking"] = False
+        question = session.pop("pending_question", None)
 
         if question:
-            # append user question ONCE
             session["chat"].append(("user", question))
             session["chat"] = trim_chat(session["chat"])
 
-            tutor_reply = ask_tutor(question)
+            now = time.time()
+            cooldown_until = session.get("cooldown_until", 0)
 
-            # append tutor reply
+            if now < cooldown_until:
+                wait = int(cooldown_until - now)
+                tutor_reply = (
+                    f"I need a short break right now.\n\n"
+                    f"Please wait about {wait} seconds and ask again 😊"
+                )
+            else:
+                try:
+                    tutor_reply = ask_tutor(question)
+                except ClientError as e:
+                    if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                        session["cooldown_until"] = time.time() + COOLDOWN_SECONDS
+                        tutor_reply = (
+                            "I need a short break because many students are asking questions right now.\n\n"
+                            "Please wait about 30 seconds and then ask again 😊"
+                        )
+                    else:
+                        tutor_reply = "Something went wrong. Please try again."
+
             session["chat"].append(("tutor", tutor_reply))
             session["chat"] = trim_chat(session["chat"])
+            session.modified = True
 
-        session.modified = True
         return redirect(url_for("home"))
 
     return render_template(
@@ -99,4 +102,4 @@ def home():
 # ---------------- RUN ----------------
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
