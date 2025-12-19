@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tutor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f8ff;
+            padding: 20px;
+        }
+
+        .chat-box {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            height: 70vh;
+            overflow-y: auto;
+        }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 15px;
+            margin: 8px 0;
+            max-width: 75%;
+            white-space: pre-line;
+        }
+
+        .user {
+            background: #2a7ae2;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .tutor {
+            background: #e0f7fa;
+            color: #000;
+            margin-right: auto;
+        }
+
+        form {
+            max-width: 700px;
+            margin: 15px auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 16px;
+            background: #2a7ae2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .typing {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.dots::after {
+    content: "";
+    animation: dots 1.5s steps(3, end) infinite;
+}
+
+@keyframes dots {
+    0% { content: ""; }
+    33% { content: "."; }
+    66% { content: ".."; }
+    100% { content: "..."; }
+}
+
+    </style>
+</head>
+<body>
+
+<h2 style="text-align:center;">AI Tutor 💬</h2>
+
+<div class="chat-box">
+    {% for role, message in chat %}
+        <div class="bubble {{ role }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    {% if thinking %}
+        <div class="bubble tutor typing">
+            Tutor is thinking<span class="dots"></span>
+        </div>
+    {% endif %}
+</div>
+
+
+<form method="POST">
+    <input type="text" name="question" placeholder="Ask your question..." required autofocus>
+    <button type="submit">Send</button>
+</form>
+
+</body>
+</html>
