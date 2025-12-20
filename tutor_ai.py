@@ -1,7 +1,7 @@
 from google import genai
 
 # 👇 Replace with your real API key
-API_KEY = "AIzaSyCrBXHCB5YgP6jv5agvOEzmwcRUhULQkaM"
+API_KEY = ""
 
 client = genai.Client(api_key=API_KEY)
 
@@ -33,3 +33,4 @@ while True:
         break
     reply = ask_tutor(user_question)
     print("\nTutor:\n", reply)
+
